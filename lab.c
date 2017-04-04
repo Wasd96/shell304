@@ -6,10 +6,25 @@
 
 #define LENGTH 128
 
-int main(void)
+pid_t pid = -1;
+char blocked = 1;
+
+void sig_hndl(int sig)
+{
+	write(1,"**", 4);
+	if (blocked == 1) {
+		if (pid > 0) {
+			kill(pid, SIGKILL);
+			exit(0);
+		}
+	}
+}
+
+int main(int argc, char *argv[])
 {
 	char str[LENGTH];
 
+	signal(SIGINT, sig_hndl);
 	strcpy(str, "Welcome to Shell304!\nTell me what do you want :)\n");
 	write(1, str, strlen(str));
 	while (1) {
@@ -18,7 +33,6 @@ int main(void)
 		char *args[LENGTH];
 		char *pargs;
 		char *saveptr;
-		pid_t pid;
 		int i = 0;
 
 		write(1, ">", 2);
@@ -31,13 +45,19 @@ int main(void)
 		if (nread > 0)
 			buff[nread-1] = 0;
 		pargs = strtok_r(buff, " ", &saveptr);
+		blocked = 1;
 		while (pargs != NULL) {
-			args[i] = pargs;
-			i++;
+			if (strcmp(pargs, "&") == 0) {
+				blocked = 0;
+			} else {
+				args[i] = pargs;
+				i++;
+			}
 			pargs = strtok_r(NULL, " ", &saveptr);
 		}
 		args[i] = 0;
 		pid = fork();
+
 		if (pid == -1) {
 			strcpy(str, "Some error in \'fork\' occures :(\n");
 			write(2, str, strlen(str));
@@ -47,11 +67,25 @@ int main(void)
 			if (i == -1) {
 				strcpy(str, "Cant exec this! }:[\n");
 				write(2, str, strlen(str));
+				exit(1);
 			}
-			exit(0);
 		} else {
-			wait(NULL);
+			if (blocked == 1)
+			{
+				int status;
+				pid_t chpid;
+				chpid = wait(&status);
+				if (WIFEXITED(status))
+					write(1, "norm", 5);
+				else
+					write(1, "nenorm", 7);
+				write(1, "w", 2);
+printf("%i %i\n", status, chpid);
+			}
+			else
+				write(1, "nw", 3);
 		}
+		
 	}
 	return 0;
 }
