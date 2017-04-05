@@ -11,11 +11,11 @@ char blocked = 1;
 
 void sig_hndl(int sig)
 {
-	write(1,"**", 4);
+	write(1,"\n", 2);
 	if (blocked == 1) {
 		if (pid > 0) {
 			kill(pid, SIGKILL);
-			exit(0);
+			//exit(0);
 		}
 	}
 }
@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
 		char *saveptr;
 		int i = 0;
 
+		usleep(200000);
 		write(1, ">", 2);
 		nread = read(0, buff, LENGTH);
 		if (nread == -1) {
@@ -53,6 +54,8 @@ int main(int argc, char *argv[])
 				args[i] = pargs;
 				i++;
 			}
+			if (strcmp(pargs, "exit") == 0) 
+				exit(0);
 			pargs = strtok_r(NULL, " ", &saveptr);
 		}
 		args[i] = 0;
@@ -72,9 +75,10 @@ int main(int argc, char *argv[])
 		} else {
 			if (blocked == 1)
 			{
+usleep(200000);
 				int status;
 				pid_t chpid;
-				chpid = wait(&status);
+				chpid = waitpid(pid, &status, 0);
 				if (WIFEXITED(status))
 					write(1, "norm", 5);
 				else
