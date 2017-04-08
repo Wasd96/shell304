@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <signal.h>
 
 #define LENGTH 128
 
@@ -11,13 +12,9 @@ char blocked = 1;
 
 void sig_hndl(int sig)
 {
-	write(1,"\n", 2);
-	if (blocked == 1) {
-		if (pid > 0) {
-			kill(pid, SIGKILL);
-			//exit(0);
-		}
-	}
+	if (blocked == 1 && pid > 0)
+		kill(pid, SIGKILL);
+	write(1, "\n>", 3);
 }
 
 int main(int argc, char *argv[])
@@ -35,7 +32,6 @@ int main(int argc, char *argv[])
 		char *saveptr;
 		int i = 0;
 
-		usleep(200000);
 		write(1, ">", 2);
 		nread = read(0, buff, LENGTH);
 		if (nread == -1) {
@@ -54,7 +50,7 @@ int main(int argc, char *argv[])
 				args[i] = pargs;
 				i++;
 			}
-			if (strcmp(pargs, "exit") == 0) 
+			if (strcmp(pargs, "exit") == 0)
 				exit(0);
 			pargs = strtok_r(NULL, " ", &saveptr);
 		}
@@ -66,6 +62,8 @@ int main(int argc, char *argv[])
 			write(2, str, strlen(str));
 			exit(1);
 		} else if (pid == 0) {
+			if (blocked == 0)
+				setsid();
 			i = execvp(buff, args);
 			if (i == -1) {
 				strcpy(str, "Cant exec this! }:[\n");
@@ -73,23 +71,17 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 		} else {
-			if (blocked == 1)
-			{
-usleep(200000);
-				int status;
+			if (blocked == 1) {
 				pid_t chpid;
-				chpid = waitpid(pid, &status, 0);
-				if (WIFEXITED(status))
-					write(1, "norm", 5);
-				else
-					write(1, "nenorm", 7);
-				write(1, "w", 2);
-printf("%i %i\n", status, chpid);
+
+				chpid = waitpid(pid, &i, 0);
+				if (chpid != pid) {
+					strcpy(str, "Wrong child died\n");
+					write(2, str, strlen(str));
+				}
 			}
-			else
-				write(1, "nw", 3);
+			pid = 0;
 		}
-		
 	}
 	return 0;
 }
